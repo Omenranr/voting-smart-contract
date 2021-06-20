@@ -1,12 +1,20 @@
 import React, { Component } from "react";
-import SimpleStorageContract from "./contracts/SimpleStorage.json";
 import VotingContract from "./contracts/Voting.json";
 import getWeb3 from "./getWeb3";
-
+import { OwnerComponent } from "./Components";
 import "./App.css";
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null, votingContract: null };
+  state = {
+    userType: "owner", 
+    web3: null, 
+    accounts: null, 
+    votingContract: null, 
+    whiteListed: [], 
+    startedProposal: false,
+    proposals : [],
+    votes: {},
+  };
 
   componentDidMount = async () => {
     try {
@@ -15,22 +23,18 @@ class App extends Component {
 
       // Use web3 to get the user's accounts.
       const accounts = await web3.eth.getAccounts();
-
       // Get the contract instance.
       const networkId = await web3.eth.net.getId();
-      const deployedNetwork = SimpleStorageContract.networks[networkId]
       const votingDeployedNetwork = VotingContract.networks[networkId]
       const votingInstance = new web3.eth.Contract(
         VotingContract.abi,
         votingDeployedNetwork && votingDeployedNetwork.address
       )
-      const instance = new web3.eth.Contract(
-        SimpleStorageContract.abi,
-        deployedNetwork && deployedNetwork.address,
-      );
       // Set web3, accounts, and contract to the state, and then proceed with an
       // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance, votingContract: votingInstance}, this.runExample);
+      const whiteListed = JSON.parse(sessionStorage.getItem("whiteListed")) || []
+      console.log(whiteListed)
+      this.setState({ web3, accounts, votingContract: votingInstance, whiteListed: whiteListed});
     } catch (error) {
       // Catch any errors for any of the above operations.
       alert(
@@ -40,15 +44,55 @@ class App extends Component {
     }
   };
 
+  addToWhiteList = async (addressText) => {
+    const {votingContract, accounts, whiteListed} = this.state
+    if (whiteListed.includes(addressText) === false) {
+      this.setState((state) => {
+        sessionStorage.setItem("whiteListed", JSON.stringify([...state.whiteListed, addressText]))
+        return {whiteListed: [...state.whiteListed, addressText]}
+      })
+      const addWhiteListAnswer = await votingContract.methods.addToWhiteList(addressText).send({from: accounts[0]}, (error) => {console.log(error)})
+      votingContract.events.VoterRegistered().on('data', (event) => console.log("event", event)).on('error', (error) => console.log(error))
+      console.log("addWhiteListAnswer", addWhiteListAnswer)
+    } else {
+      console.log("Address Already WhiteListed")
+    }
+  }
+
+  startProposals = async () => {
+    const {votingContract, accounts} = this.state
+    // START PROPOSAL !!! J'ai egalement rajouter un event ici sans la fonction callBack car j'ai du mal a comprendre comment ca marche
+    console.log("STARTING PROPOSAL PHASE")
+    const startProposalAnswer = await votingContract.methods.startProposals().send({from: accounts[0]})
+    votingContract.events.ProposalsRegistrationStarted().on('data', (event) => console.log(event)).on('error', error => console.log(error))
+    console.log("startProposalAnswer", startProposalAnswer)
+    this.setState({startedProposal: true})
+  }
+
+  endProposals = async () => {
+    const {votingContract, accounts} = this.state
+    //END PROPOSAL PERIOD  !!! 2 Event ici  
+     const endProposalsAnswer = await votingContract.methods.endProposals(1).send({from: accounts[0]})
+     votingContract.events.ProposalsRegistrationEnded().on('data', (event) => this.cbEventProposalsHaveEnded(event)).on('error', console.error)
+     votingContract.events.WorkflowStatusChange().on('data', (event) => this.cbEventStatusChanged(event)).on('error', console.error)
+     console.log("endProposalsAnswer", endProposalsAnswer)   
+  }
+
+  makeProposal = async (proposal) => {
+    const {votingContract, accounts, proposals} = this.state
+    // MAKE PROPOSAL !!! Event ici egalement
+    if (proposals.includes(proposal) === false) {
+      const makeProposalAnswer = await votingContract.methods.proposals(proposal).send({from: accounts[0]})
+      votingContract.events.ProposalRegistered().on('data', (event) => this.cbEventProposalHasBeenSubmitted(event)).on('error', console.error)
+      console.log("makeProposalAnswer", makeProposalAnswer)  
+    } else {
+      console.log("Proposal already made")
+    }
+  }
+
   runExample = async () => {
-    const { accounts, contract, votingContract } = this.state;
-
+    const {votingContract} = this.state;
     console.log("old state", await votingContract.methods.getState().call())
-
-    // ADD TO WHITELIST !!! J'ai ajoute des events, ligne 113 il y a un callback, je ne comprend pas trop l'utilite du callback ici...
-     //const addWhiteListAnswer = await votingContract.methods.addToWhiteList(accounts[0]).send({from: accounts[0]})
-     //votingContract.events.VoterRegistered().on('data', (event) => this.cbEventWhiteListed(event)).on('error', console.error)
-     //console.log("addWhiteListAnswer", addWhiteListAnswer)
 
     // START PROPOSAL !!! J'ai egalement rajouter un event ici sans la fonction callBack car j'ai du mal a comprendre comment ca marche
     //const startProposalAnswer = await votingContract.methods.startProposals("How to save the planet").send({from: accounts[0]})
@@ -100,13 +144,6 @@ class App extends Component {
 
        // SHOW NEW STATE
        console.log("new state", await votingContract.methods.getState().call())
-
-    await contract.methods.set(10).send({ from: accounts[0] });
-
-    // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
-    // Update state with the result.
-    this.setState({ storageValue: response });
   };
 
   /// Voici un exemple de callback, je ne voit pas comment l'utiliser mais c'est utile pour recuperer les differents events.
@@ -123,6 +160,19 @@ class App extends Component {
     if (!this.state.web3) {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
+    if (this.state.userType === "owner") {
+      return (
+      <OwnerComponent 
+        toWhiteList = {this.state.toWhiteList} 
+        whiteListed = {this.state.whiteListed} 
+        proposals = {this.state.proposals}
+        addToWhiteList = {this.addToWhiteList}
+        startProposals = {this.startProposals}
+        endProposals = {this.endProposals}
+        startedProposal = {this.state.startedProposal}
+      />
+      )
+    }
     return (
       <div className="App">
         <h1>Good to Go!</h1>
@@ -135,7 +185,6 @@ class App extends Component {
         <p>
           Try changing the value stored on <strong>line 42</strong> of App.js.
         </p>
-        <div>The stored value is: {this.state.storageValue}</div>
       </div>
     );
   }
