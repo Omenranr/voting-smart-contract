@@ -43,29 +43,63 @@ class App extends Component {
   runExample = async () => {
     const { accounts, contract, votingContract } = this.state;
 
-    // Stores a given value, 5 by default.
     console.log("old state", await votingContract.methods.getState().call())
 
-    // ADD TO WHITELIST
-    // const addWhiteListAnswer = await votingContract.methods.addToWhiteList(accounts[4]).send({from: accounts[0]})
-    // console.log("addWhiteListAnswer", addWhiteListAnswer)
+    // ADD TO WHITELIST !!! J'ai ajoute des events, ligne 113 il y a un callback, je ne comprend pas trop l'utilite du callback ici...
+     //const addWhiteListAnswer = await votingContract.methods.addToWhiteList(accounts[0]).send({from: accounts[0]})
+     //votingContract.events.VoterRegistered().on('data', (event) => this.cbEventWhiteListed(event)).on('error', console.error)
+     //console.log("addWhiteListAnswer", addWhiteListAnswer)
 
-    // START PROPOSAL
-    // const startProposalAnswer = await votingContract.methods.startProposals().send({from: accounts[0]})
-    // console.log("startProposalAnswer", startProposalAnswer)
+    // START PROPOSAL !!! J'ai egalement rajouter un event ici sans la fonction callBack car j'ai du mal a comprendre comment ca marche
+    //const startProposalAnswer = await votingContract.methods.startProposals("How to save the planet").send({from: accounts[0]})
+    //votingContract.events.ProposalsRegistrationStarted().on('data', (event) => this.cbEventProposalsHasStarted(event)).on('error', console.log.error)
+    //console.log("startProposalAnswer", startProposalAnswer)
 
-    // SHOW NEW STATE
-    console.log("new state", await votingContract.methods.getState().call())
 
-    // MAKE PROPOSAL
-    // const makeProposalAnswer = await votingContract.methods.proposals("Stop using diesell").send({from: accounts[2]})
-    // console.log("makeProposalAnswer", makeProposalAnswer)
+    // MAKE PROPOSAL !!! Event ici egalement 
+     //const makeProposalAnswer = await votingContract.methods.proposals("Stop using diesell").send({from: accounts[0]})
+     //votingContract.events.ProposalRegistered().on('data', (event) => this.cbEventProposalHasBeenSubmitted(event)).on('error', console.error)
+     //console.log("makeProposalAnswer", makeProposalAnswer)
 
-    // const endProposalsAnswer = await votingContract.methods.endProposals(1).send({from: accounts[0]})
-    // console.log("endProposalsAnswer", endProposalsAnswer)
+    //END PROPOSAL PERIOD  !!! 2 Event ici  
+     //const endProposalsAnswer = await votingContract.methods.endProposals(1).send({from: accounts[0]})
+     //votingContract.events.ProposalsRegistrationEnded().on('data', (event) => this.cbEventProposalsHaveEnded(event)).on('error', console.error)
+     //votingContract.events.WorkflowStatusChange().on('data', (event) => this.cbEventStatusChanged(event)).on('error', console.error)
+     //console.log("endProposalsAnswer", endProposalsAnswer)
 
-    // const startVotingAnswer = await votingContract.methods.startVoting().send({from: accounts[0]})
-    // console.log("startVotingAnswer", startVotingAnswer)
+    //GET PROPOSALS
+    //const getProposalsAnswer = await votingContract.methods.getProposals().call()
+    //console.log("getProposalsAnswer", getProposalsAnswer)
+    
+
+    //START VOTING PERIOD !!! 2 Event ici 
+     //const startVotingAnswer = await votingContract.methods.startVoting().send({from: accounts[0]})
+     //votingContract.events.VotingSessionStarted().on('data', (event) => this.cbEventVotingHasBegun(event)).on('error', console.error)
+     //votingContract.events.WorkflowStatusChange().on('data', (event) => this.cbEventStatusChanged(event)).on('error', console.error)
+     //console.log("startVotingAnswer", startVotingAnswer)
+
+    //PEOPLE VOTE FOR THEIR FAVORITE PROPOSAL !!! Event ici egalement 
+    //const votingTimeBabyAnswer = await votingContract.methods.votingTimeBaby(0).send({from: accounts[0]})
+    //votingContract.events.Voted().on('data', (event) => this.cbEventHasVoted(event)).on('error', console.error)
+    //console.log("votingTimeBabyAnswer", votingTimeBabyAnswer)
+
+    //STOP VOTING PERIOD !!! 2 Event ici 
+    //const endVotingAnswer = await votingContract.methods.stopVotes(1).send({from: accounts[0]})
+    //votingContract.events.VotingSessionEnded().on('data', (event) => this.cbEventVotingHasEnded(event)).on('error', console.error)
+    //votingContract.events.WorkflowStatusChange().on('data', (event) => this.cbEventStatusChanged(event)).on('error', console.error)
+    //console.log("endVotingAnswer", endVotingAnswer)
+
+    //COUNT WINNER  !!! Event ici egalement 
+    //const winningProposalAnswer = await votingContract.methods.winningProposal().send({from: accounts[0]})
+    //votingContract.events.VotesTallied().on('data', (event) => this.cbEventVotesAreTallied(event)).on('error', console.error)
+    //console.log("winningProposalAnswer", winningProposalAnswer)
+
+    //DISPLAY WINNER 
+    //const showWinnerAnswer = await votingContract.methods.showWinner().call()
+    //console.log("showWinnerAnswer", showWinnerAnswer)
+
+       // SHOW NEW STATE
+       console.log("new state", await votingContract.methods.getState().call())
 
     await contract.methods.set(10).send({ from: accounts[0] });
 
@@ -74,6 +108,16 @@ class App extends Component {
     // Update state with the result.
     this.setState({ storageValue: response });
   };
+
+  /// Voici un exemple de callback, je ne voit pas comment l'utiliser mais c'est utile pour recuperer les differents events.
+  ///Ici le storageValue n'est pas bon, je dois le remplacer par WhiteListedAddresses par exemple.
+  // cbEventWhiteListed = async (event) => {
+  //  const { storageValue  } = this.state;
+  //
+  //   const updatedWhiteList = storageValue.push(event.returnValues[0]);
+  //
+  //  this.setState({storageValue: updatedWhiteList})
+  // }
 
   render() {
     if (!this.state.web3) {
