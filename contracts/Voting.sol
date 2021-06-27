@@ -19,6 +19,7 @@ contract Voting is Ownable {
     uint endOfVotes;
     string public nameOfVote;
     uint public winningProposalId;
+    uint votersCount;
     
      ///@notice we will create a mapping for our struct Voter
     ///@ALYRA, I decided to add an extra bool hasProposed to be able to know if user proposed an idea 
@@ -28,6 +29,7 @@ contract Voting is Ownable {
         bool hasProposed;
         bool hasVoted;
         uint votedProposalId;
+        address userid;
     }
     
      ///@notice here the easiest way I found to query informations was through an array, I decided to go with a proposal array
@@ -40,6 +42,7 @@ contract Voting is Ownable {
     }
     
     Proposal[] propositions;
+    address[] whiteList;
     
     ///@notice we will keep track of our state using these enum
     
@@ -76,11 +79,16 @@ contract Voting is Ownable {
     
     function addToWhiteList(address _address) public onlyOwner {
         
-        require(voters[_address].isRegistered == false, "This address is already whiteListed");
+        // require(voters[_address].isRegistered == false, "This address is already whiteListed");
         
         voters[_address].isRegistered = true;
-        
+        whiteList.push(_address);
+        votersCount++;
         emit VoterRegistered(_address);
+    }
+
+    function getWhiteList() public view returns(address[] memory) {
+        return whiteList;
     }
     
     ///@notice this is our function to start the proposal phase
@@ -118,7 +126,7 @@ contract Voting is Ownable {
     ///then it also helps our user to check the state of the contract/votingProcess
     
     function getState() public view returns(WorkflowStatus) {
-      return state;   
+      return state; 
     }
             
     ///@notice Before allowing to vote we want to be sure the msg.sender has the right to propose
@@ -204,7 +212,7 @@ contract Voting is Ownable {
      function getProposals() public view returns(Proposal[] memory) {
         return propositions;
     }
-    
+
     ///@notice Here we will use a for loop to iterate through our voteCount and get the voteCount who has the most votes
     ///@dev Firstly make sure that the voting session has ended.
     ///@dev Seeting a counter to iterate = winningVoteCount
